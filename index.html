@@ -44,13 +44,17 @@
 	var scene;
 	var renderer;
 		
+	//snow
+	var particleSystem, particleCount, particles;
+	
 	function init(){
 			window.addEventListener('resize', onResize, false);
 		
 			const overlay = document.getElementById( 'overlay' );
 			overlay.remove();
 		
-			scene = new THREE.Scene();		
+			scene = new THREE.Scene();	
+			scene.fog = new THREE.FogExp2( 0x111111, 0.002 );			
 			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
 			//const renderer = new THREE.WebGLRenderer();
@@ -106,7 +110,7 @@
 			
 			var model;						
 			const loader = new THREE.GLTFLoader();			
-			loader.load( 'obj_2/tree_v7.gltf', function ( gltf ) {
+			loader.load( 'obj_2/tree_v11.gltf', function ( gltf ) {
 			//loader.load( 'obj_2/tree_v7.gltf', function ( gltf ) {
 				model = gltf.scene;
 				model.position.y=3.5;
@@ -115,21 +119,43 @@
 				console.error( error );
 			} );
 			
+			//snow
+			particleCount = 3000;
+			var pMaterial = new THREE.PointCloudMaterial({
+				color: 0xffffff,
+				size: 1,
+				map: loader.load(
+					"https://s3-us-west-2.amazonaws.com/s.cdpn.io/212131/snow-small.png"
+				),
+				blending: THREE.AdditiveBlending,
+				depthTest: false,
+				transparent: true
+			});
 
+			particles = new THREE.Geometry();
+			for (var i = 0; i < particleCount; i++) {
+				var pX = Math.random() * 500 - 250,
+					pY = Math.random() * 500 - 250,
+					pZ = Math.random() * 500 - 250,
+					particle = new THREE.Vector3(pX, pY, pZ);
+				particle.velocity = {};
+				particle.velocity.y = 0;
+				particles.vertices.push(particle);
+			}
+			particleSystem = new THREE.PointCloud(particles, pMaterial);
+			scene.add(particleSystem);
 			
-			//var light = new THREE.AmbientLight(0x404040);
-			var light = new THREE.PointLight( 0xffffff , 1, 200 );
-			light.position.set( 30, 50, 30 );
+			
+			var light = new THREE.PointLight( 0xCDCDCD , 0.5, 200 );
+			light.position.set( -45, 100, -45 );
 			scene.add( light );
 		
-			var light2 = new THREE.PointLight( 0xffffff , 1, 200 );
-			light2.position.set( -30, 50, -30 );
+			var light2 = new THREE.PointLight( 0xCDCDCD , 0.5, 200 );
+			light2.position.set( 30, 100, 30 );	
 			scene.add( light2 );
+			
 		
-			const spotLight = new THREE.SpotLight( 0xffffff );
-			spotLight.position.set( 100, 1000, 100 );				
-		
-			var ambientLight = new THREE.AmbientLight( 0x404040 );
+			var ambientLight = new THREE.AmbientLight( 0xCDCDCD );
 			scene.add(ambientLight);
 			
 			camera.position.z = 50;
@@ -145,7 +171,7 @@
 				//cube.rotation.x += 0.01;
 				//cube.rotation.y += 0.01;
 				controls.update();
-				
+				simulateRain();
 				//camera.position.z += 0.01;
 				//camera.position.x += 0.01;
 
@@ -159,6 +185,20 @@
 		  camera.updateProjectionMatrix();
 		  renderer.setSize(window.innerWidth, window.innerHeight);
 	}
+	
+	function simulateRain() {
+    var pCount = particleCount;
+    while (pCount--) {
+        var particle = particles.vertices[pCount];
+        if (particle.y < -200) {
+            particle.y = 200;
+            particle.velocity.y = 0;
+        }
+        particle.velocity.y -= Math.random() * 0.02;
+        particle.y += particle.velocity.y;
+    }
+    particles.verticesNeedUpdate = true;
+}
 
 		</script>
 	</body>
